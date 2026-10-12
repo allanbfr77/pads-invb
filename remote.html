@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0e1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pads">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<title>Pads</title>
+<style>
+  :root { --bg:#0e1116; --card:#171b23; --key:#202636; --fg:#e8ecf2; --mut:#8a94a6; --acc:#7c9cff; --ok:#3ecf8e; --bad:#ff6b6b; --warn:#ffb454; --line:#2f374a; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:system-ui,sans-serif; overscroll-behavior:none; }
+  body { display:flex; flex-direction:column; padding:max(10px,env(safe-area-inset-top)) 12px 0; gap:10px; }
+  button { font:inherit; color:var(--fg); }
+  header { display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--mut); gap:8px; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--bad); margin-right:6px; }
+  .dot.on { background:var(--ok); } .dot.warn { background:var(--warn); }
+  #now { color:var(--fg); font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  main { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .screen { display:none; flex:1; min-height:0; flex-direction:column; gap:10px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .screen.on { display:flex; }
+
+  /* tons */
+  .localbtn { width:100%; padding:13px; border-radius:12px; border:1px solid var(--line); background:#232938; font-size:15px; font-weight:600; }
+  .localbtn.on { background:var(--ok); border-color:var(--ok); color:#06210f; }
+  .seg { display:flex; background:var(--card); border-radius:12px; padding:4px; gap:4px; }
+  .seg button { flex:1; padding:11px 0; border:0; border-radius:9px; background:transparent; color:var(--mut); font-size:15px; font-weight:700; }
+  .seg button.on { background:var(--acc); color:#0b1020; }
+  .grid { flex:1; min-height:230px; display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:1fr; gap:8px; }
+  .key { background:var(--key); border:0; border-radius:14px; font-size:24px; font-weight:700; transition:transform .06s, background .15s; }
+  .key small { display:block; font-size:11px; font-weight:500; color:var(--mut); margin-top:2px; min-height:14px; }
+  .key:active { transform:scale(.96); }
+  .key.black { background:#171c28; }
+  .key.active { background:var(--acc); color:#0b1020; box-shadow:0 0 0 3px rgba(124,156,255,.35); }
+  .key.active small { color:#26315a; }
+  .key.active.paused { background:#3b4668; color:#fff; box-shadow:none; }
+
+  .panel { background:var(--card); border-radius:16px; padding:12px 14px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { flex:1 1 30%; padding:12px 6px; border-radius:10px; border:1px solid var(--line); background:#232938; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chip.on { background:var(--acc); color:#0b1020; border-color:var(--acc); font-weight:600; }
+  .slider { display:grid; grid-template-columns:70px 1fr 56px; align-items:center; gap:10px; font-size:13px; color:var(--mut); margin:6px 0; }
+  .slider output { text-align:right; color:var(--fg); }
+  input[type=range] { width:100%; height:32px; accent-color:var(--acc); }
+  .padrow { display:flex; align-items:center; gap:10px; margin:6px 0 2px; }
+  .padrow .pl { width:48px; font-size:13px; font-weight:700; color:var(--mut); }
+  .padrow select { flex:1; min-width:0; font:inherit; font-size:16px; color:var(--fg); background:#232938; border:1px solid var(--line); border-radius:10px; padding:11px 10px; }
+  .fadeout { width:100%; padding:16px; border:0; border-radius:12px; background:#3a2227; color:#ffb4b4; font-size:17px; font-weight:700; }
+  .fadeout:active { background:#52303a; }
+  .h { font-size:12px; color:var(--mut); text-transform:uppercase; letter-spacing:.05em; margin:2px 0 8px; }
+
+  /* culto */
+  .navrow { display:flex; gap:10px; }
+  .navrow button { flex:1; padding:18px 0; border:0; border-radius:14px; background:var(--key); font-size:17px; font-weight:700; }
+  .navrow button.next { background:var(--acc); color:#0b1020; }
+  .song { display:flex; align-items:center; gap:10px; background:var(--card); border-radius:14px; padding:6px 6px 6px 14px; min-height:58px; }
+  .song.on { outline:2px solid var(--acc); background:#1d2540; }
+  .song .n { color:var(--mut); width:20px; font-size:13px; }
+  .song .t { flex:1; text-align:left; background:none; border:0; padding:12px 0; font-size:17px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .song .k { min-width:46px; text-align:center; padding:6px 8px; border-radius:8px; background:#232938; font-weight:700; }
+  .song .k.none { color:var(--mut); font-weight:400; }
+  .song .e { background:none; border:0; font-size:20px; color:var(--mut); padding:12px; }
+  .row2 { display:flex; gap:8px; }
+  .row2 button, .btn { flex:1; padding:14px; border-radius:12px; border:1px solid var(--line); background:#232938; font-size:15px; }
+  .btn.primary { background:var(--acc); color:#0b1020; border:0; font-weight:700; }
+  .btn.danger { background:#3a2227; color:#ffb4b4; border:0; }
+  .empty { color:var(--mut); text-align:center; padding:28px 10px; font-size:14px; line-height:1.5; }
+
+  /* ajustes */
+  .preset { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  .preset .pn { flex:1; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .preset button { padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:#232938; font-size:13px; }
+  .note { font-size:12px; color:var(--mut); line-height:1.5; }
+
+  /* barra de abas */
+  nav { display:flex; padding:6px 0 max(8px,env(safe-area-inset-bottom)); gap:6px; }
+  nav button { flex:1; padding:11px 0; border:0; border-radius:12px; background:transparent; color:var(--mut); font-size:14px; font-weight:600; }
+  nav button.on { background:var(--card); color:var(--fg); }
+
+  /* modais */
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:flex-end; justify-content:center; z-index:10; padding:12px; }
+  .overlay.on { display:flex; }
+  .sheet { width:100%; max-width:520px; background:var(--card); border-radius:18px; padding:18px; display:flex; flex-direction:column; gap:12px; max-height:90vh; overflow:auto; }
+  .sheet h2 { margin:0; font-size:17px; }
+  .sheet input, .sheet select, .sheet textarea { width:100%; font:inherit; font-size:17px; color:var(--fg); background:#232938; border:1px solid var(--line); border-radius:10px; padding:12px; user-select:text; -webkit-user-select:text; }
+  .sheet textarea { min-height:160px; resize:vertical; }
+  .err { color:var(--bad); font-size:13px; min-height:16px; }
+</style>
+</head>
+<body>
+<header>
+  <div><span class="dot" id="dot"></span><span id="conn">Conectando…</span></div>
+  <div id="now"></div>
+</header>
+
+<main>
+  <!-- TONS -->
+  <section class="screen on" id="s-tons">
+    <button class="localbtn" id="localBtn">Tocar neste aparelho</button>
+    <div class="note" id="localMsg" style="margin:-4px 0 0"></div>
+    <div class="seg" id="modeSeg"><button data-m="maj">Maior</button><button data-m="min">Menor</button></div>
+    <div class="grid" id="grid"></div>
+    <div class="panel">
+      <div class="padrow"><span class="pl">Pad 1</span><select id="timbre0"></select></div>
+      <div class="slider"><span>Nível</span><input type="range" id="level0" min="0" max="100"><output id="level0O"></output></div>
+      <div class="padrow"><span class="pl">Pad 2</span><select id="timbre1"></select></div>
+      <div class="slider"><span>Nível</span><input type="range" id="level1" min="0" max="100"><output id="level1O"></output></div>
+    </div>
+    <div class="panel">
+      <div class="chips" id="presetChips" style="margin-bottom:8px"></div>
+      <div class="slider" style="margin:4px 0 10px"><span>Volume</span><input type="range" id="volume" min="0" max="100"><output id="volumeO"></output></div>
+      <button class="fadeout" id="fadeout">Fade out</button>
+    </div>
+  </section>
+
+  <!-- CULTO -->
+  <section class="screen" id="s-culto">
+    <div class="navrow">
+      <button id="prev">◀ Anterior</button>
+      <button id="next" class="next">Próxima ▶</button>
+    </div>
+    <div id="songs" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="row2">
+      <button id="addSong">+ Música</button>
+      <button id="pasteList">Colar lista</button>
+    </div>
+    <div class="note">Toque numa música para tocar o tom dela. A troca faz crossfade, sem corte.</div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="screen" id="s-ajustes">
+    <div class="panel">
+      <div class="h">Pad 1 · fade</div>
+      <div class="slider"><span>Entrada</span><input type="range" id="fadeIn0" min="5" max="100"><output id="fadeIn0O"></output></div>
+      <div class="slider"><span>Saída</span><input type="range" id="fadeOut0" min="5" max="100"><output id="fadeOut0O"></output></div>
+    </div>
+    <div class="panel">
+      <div class="h">Pad 2 · fade</div>
+      <div class="slider"><span>Entrada</span><input type="range" id="fadeIn1" min="5" max="100"><output id="fadeIn1O"></output></div>
+      <div class="slider"><span>Saída</span><input type="range" id="fadeOut1" min="5" max="100"><output id="fadeOut1O"></output></div>
+      <div class="note" id="samplesNote"></div>
+    </div>
+    <div class="panel">
+      <div class="h">Som</div>
+      <div class="slider"><span>Brilho</span><input type="range" id="tone" min="0" max="100"><output id="toneO"></output></div>
+      <div class="slider"><span>Reverb</span><input type="range" id="reverb" min="0" max="100"><output id="reverbO"></output></div>
+      <div class="slider"><span>Afinação</span><input type="range" id="tuning" min="-50" max="50"><output id="tuningO"></output></div>
+      <div class="note">Afinação em centésimos de semitom (0 = A 440 Hz). Use para acompanhar um piano ou um violão desafinado.</div>
+    </div>
+    <div class="panel">
+      <div class="h">Presets (Salvar guarda pads, níveis, fades, brilho e reverb atuais)</div>
+      <div id="presetList"></div>
+    </div>
+    <div class="panel">
+      <div class="h">Conexão</div>
+      <div class="note" id="connInfo"></div>
+      <div class="row2" style="margin-top:10px"><button id="logout" style="display:none">Trocar PIN</button></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="tons" class="on">Tons</button>
+  <button data-tab="culto">Culto</button>
+  <button data-tab="ajustes">Ajustes</button>
+</nav>
+
+<!-- modal: música -->
+<div class="overlay" id="songModal"><div class="sheet">
+  <h2 id="songTitle">Música</h2>
+  <input id="songName" placeholder="Nome da música" maxlength="60">
+  <select id="songKey"></select>
+  <select id="songMode"><option value="maj">Maior</option><option value="min">Menor</option></select>
+  <div class="row2">
+    <button class="btn" id="songUp">↑ Subir</button>
+    <button class="btn" id="songDown">↓ Descer</button>
+  </div>
+  <div class="row2">
+    <button class="btn danger" id="songDel">Excluir</button>
+    <button class="btn" id="songCancel">Cancelar</button>
+    <button class="btn primary" id="songSave">Salvar</button>
+  </div>
+</div></div>
+
+<!-- modal: colar lista -->
+<div class="overlay" id="pasteModal"><div class="sheet">
+  <h2>Colar lista de músicas</h2>
+  <div class="note">Uma música por linha, com o tom no fim ("m" = menor). Exemplos:<br>Grande é o Senhor - G<br>Em Espírito - Bbm<br>Santo (D)</div>
+  <textarea id="pasteText" placeholder="Nome - Tom"></textarea>
+  <div class="row2">
+    <button class="btn danger" id="pasteReplace">Substituir tudo</button>
+    <button class="btn primary" id="pasteAdd">Adicionar</button>
+  </div>
+  <button class="btn" id="pasteCancel">Cancelar</button>
+</div></div>
+
+<!-- modal: PIN -->
+<div class="overlay" id="pinModal"><div class="sheet">
+  <h2>Digite o PIN</h2>
+  <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">
+  <div class="err" id="pinErr"></div>
+  <button class="btn primary" id="pinOk">Entrar</button>
+</div></div>
+
+<script src="/engine.js"></script>
+<script>
+const SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const FLAT  = ['','Db','','Eb','','','Gb','','Ab','','Bb',''];
+const $ = (id) => document.getElementById(id);
+const lsGet = (k) => { try { return localStorage.getItem(k) || ''; } catch { return ''; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+const lsDel = (k) => { try { localStorage.removeItem(k); } catch {} };
+const buzz = (n = 12) => { try { navigator.vibrate && navigator.vibrate(n); } catch {} };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+let ws, snap = null, st = null, pin = lsGet('padsPin'), dragging = null, editIndex = -1;
+
+function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+
+// envia sliders no máximo a cada 50 ms (com valor final garantido)
+const pending = {}, lastSent = {};
+function sendThrottled(id, type, value, extra) {
+  pending[id] = value;
+  const now = Date.now();
+  if (!pending['_t' + id]) {
+    const wait = Math.max(0, 50 - (now - (lastSent[id] || 0)));
+    pending['_t' + id] = setTimeout(() => {
+      pending['_t' + id] = null; lastSent[id] = Date.now();
+      send({ type, value: pending[id], ...extra });
+    }, wait);
+  }
+}
+
+// ---------------------------------------------------------------- abas
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === 's-' + b.dataset.tab));
+});
+
+// ---------------------------------------------------------------- teclas
+SHARP.forEach((n, i) => {
+  const b = document.createElement('button');
+  b.className = 'key' + (FLAT[i] ? ' black' : '');
+  b.innerHTML = `<span class="kn">${n}</span><small>${FLAT[i]}</small>`;
+  b.dataset.k = i;
+  b.addEventListener('pointerdown', () => {
+    buzz();
+    if (st && st.playing && st.key === i) send({ type: 'fadeout' }); // tocar o tom ativo de novo = fade out
+    else send({ type: 'key', value: i });
+  });
+  $('grid').appendChild(b);
+});
+$('fadeout').onclick = () => { buzz(20); send({ type: 'fadeout' }); };
+// ---------------------------------------------------------------- som neste aparelho
+// O celular pode tocar o áudio sozinho (mesmo motor do player do PC), seguindo o mesmo estado.
+let local = false;
+const eng = createEngine({
+  getSnap: () => snap,
+  onMsg: (t) => { $('localMsg').textContent = t; },
+  onSuspend: () => { local = false; eng.setActive(false); renderLocal(); }, // o navegador pausou o áudio
+});
+function renderLocal() {
+  const b = $('localBtn');
+  b.classList.toggle('on', local);
+  b.textContent = local ? 'Tocando neste aparelho · toque para silenciar' : 'Tocar neste aparelho';
+  if (!local && !$('localMsg').textContent) $('localMsg').textContent = 'Toca o som aqui no celular, além do PC. Para só o celular, silencie o player do PC.';
+}
+$('localBtn').onclick = async () => {
+  buzz(20);
+  if (local) { local = false; eng.setActive(false); }
+  else {
+    $('localMsg').textContent = '';
+    if (await eng.start()) { local = true; eng.setActive(true); }
+    else $('localMsg').textContent = 'O navegador não liberou o áudio. Toque de novo.';
+  }
+  renderLocal();
+};
+renderLocal();
+
+[0, 1].forEach((i) => { $('timbre' + i).onchange = (e) => { buzz(); send({ type: 'timbre', layer: i, value: e.target.value }); }; });
+document.querySelectorAll('#modeSeg button').forEach((b) => b.onclick = () => { buzz(); send({ type: 'mode', value: b.dataset.m }); });
+
+// ---------------------------------------------------------------- sliders
+function bindSlider(id, type, scale, fmt, extra) {
+  const el = $(id);
+  el.addEventListener('pointerdown', () => { dragging = id; });
+  el.addEventListener('input', () => { sendThrottled(id, type, Number(el.value) / scale, extra); $(id + 'O').textContent = fmt(Number(el.value)); });
+  ['pointerup', 'pointercancel', 'change'].forEach((ev) => el.addEventListener(ev, () => { dragging = null; }));
+}
+const pct = (v) => v + '%';
+bindSlider('volume', 'volume', 100, pct);
+bindSlider('tone', 'tone', 100, (v) => v === 50 ? 'neutro' : pct(v));
+const secs = (v) => (v / 10).toFixed(1) + 's';
+bindSlider('reverb', 'reverb', 100, pct);
+[0, 1].forEach((i) => {
+  bindSlider('level' + i, 'level', 100, pct, { layer: i });
+  bindSlider('fadeIn' + i, 'layerFade', 10, secs, { layer: i, which: 'in' });
+  bindSlider('fadeOut' + i, 'layerFade', 10, secs, { layer: i, which: 'out' });
+});
+bindSlider('tuning', 'tuning', 1, (v) => (v > 0 ? '+' : '') + v + 'c');
+
+function setSlider(id, v, fmt) {
+  const el = $(id);
+  if (dragging !== id) el.value = v;
+  $(id + 'O').textContent = fmt(Number(el.value));
+}
+
+// ---------------------------------------------------------------- render
+function keyLabel(k, minor) { return k === null || k === undefined ? '—' : SHARP[k] + (minor ? 'm' : ''); }
+
+// preenche um <select> só quando a lista muda (reconstruir com o seletor aberto o fecharia no celular)
+function fillSelect(el, items, value) {
+  const sig = JSON.stringify(items);
+  if (el.dataset.sig !== sig) {
+    el.innerHTML = items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
+    el.dataset.sig = sig;
+  }
+  el.value = value;
+}
+
+function render() {
+  if (!st) return;
+  const minor = st.mode === 'min';
+  document.querySelectorAll('#modeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.m === st.mode));
+  document.querySelectorAll('.key').forEach((b) => {
+    const k = Number(b.dataset.k);
+    b.querySelector('.kn').textContent = SHARP[k] + (minor ? 'm' : '');
+    b.querySelector('small').textContent = FLAT[k] ? FLAT[k] + (minor ? 'm' : '') : '';
+    b.classList.toggle('active', st.key === k);
+    b.classList.toggle('paused', st.key === k && !st.playing);
+  });
+
+  setSlider('volume', Math.round(st.volume * 100), pct);
+  setSlider('tone', Math.round(st.tone * 100), (v) => v === 50 ? 'neutro' : pct(v));
+  setSlider('reverb', Math.round(st.reverb * 100), pct);
+  setSlider('tuning', st.tuning, (v) => (v > 0 ? '+' : '') + v + 'c');
+  st.layers.forEach((l, i) => {
+    setSlider('level' + i, Math.round(l.level * 100), pct);
+    setSlider('fadeIn' + i, Math.round(l.fadeIn * 10), secs);
+    setSlider('fadeOut' + i, Math.round(l.fadeOut * 10), secs);
+  });
+
+  const lbl = (id) => { const t = snap.timbres.find((x) => x.id === id); return t ? t.label : id; };
+  const names = st.layers.filter((l) => l.timbre).map((l) => lbl(l.timbre)).join(' + ');
+  $('now').textContent = st.playing && st.key !== null ? `${keyLabel(st.key, minor)} · ${names}` : 'Silêncio';
+
+  // timbres dos dois pads
+  const opts = snap.timbres.map((t) => [t.id, t.label]);
+  fillSelect($('timbre0'), opts, st.layers[0].timbre);
+  fillSelect($('timbre1'), [['off', '— desligado —'], ...opts], st.layers[1].timbre || 'off');
+  const nSamples = snap.timbres.filter((t) => t.type === 'sample').length;
+  $('samplesNote').textContent = nSamples
+    ? 'Maior/Menor vale para pads de samples: arquivos "Cm.mp3", "Dbm.mp3"… são os menores. Timbres sintetizados soam igual nos dois modos.'
+    : 'Para usar pads reais, coloque arquivos de áudio na pasta "samples" do PC (veja o README).';
+
+  // presets (tela Tons)
+  const same = (p) => {
+    const t1 = p.layers[1].timbre || null, c1 = st.layers[1].timbre || null;
+    return p.layers[0].timbre === st.layers[0].timbre && t1 === c1 && Math.abs(p.volume - st.volume) < 0.01 && Math.abs(p.tone - st.tone) < 0.01
+      && Math.abs(p.layers[0].level - st.layers[0].level) < 0.01 && (!c1 || Math.abs(p.layers[1].level - st.layers[1].level) < 0.01);
+  };
+  $('presetChips').innerHTML = '';
+  snap.presets.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (same(p) ? ' on' : '');
+    b.textContent = p.name;
+    b.onclick = () => { buzz(); send({ type: 'preset', n: i }); };
+    $('presetChips').appendChild(b);
+  });
+  // presets (tela Ajustes)
+  $('presetList').innerHTML = '';
+  snap.presets.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'preset';
+    const pads = p.layers.filter((l) => l.timbre).map((l) => lbl(l.timbre)).join(' + ');
+    row.innerHTML = `<span class="pn">${esc(p.name)} <span class="note">· ${esc(pads)} · ${Math.round(p.volume * 100)}%</span></span><button data-a="apply">Aplicar</button><button data-a="save">Salvar</button>`;
+    row.querySelector('[data-a=apply]').onclick = () => send({ type: 'preset', n: i });
+    row.querySelector('[data-a=save]').onclick = () => {
+      const name = prompt('Nome do preset (salva o som atual neste espaço):', p.name);
+      if (name !== null) { buzz(30); send({ type: 'savePreset', n: i, name }); }
+    };
+    $('presetList').appendChild(row);
+  });
+
+  renderSetlist();
+
+  $('connInfo').textContent = (snap.players > 0 ? 'PC com áudio conectado' : 'Nenhum player aberto no PC') + ` · ${snap.remotes} controle(s)` + (snap.pin ? ' · protegido por PIN' : '');
+  $('logout').style.display = snap.pin ? '' : 'none';
+}
+
+function renderSetlist() {
+  const box = $('songs');
+  box.innerHTML = '';
+  if (!snap.setlist.length) {
+    box.innerHTML = '<div class="empty">Nenhuma música no culto ainda.<br>Toque em "+ Música" ou "Colar lista".</div>';
+    return;
+  }
+  snap.setlist.forEach((it, i) => {
+    const active = i === st.setlistIndex;
+    const row = document.createElement('div');
+    row.className = 'song' + (active ? ' on' : '');
+    row.innerHTML = `<span class="n">${i + 1}</span><button class="t">${esc(it.name)}</button><span class="k${it.key === null ? ' none' : ''}">${it.key === null ? 'sem tom' : keyLabel(it.key, it.minor)}</span><button class="e" aria-label="Editar">✎</button>`;
+    row.querySelector('.t').onclick = () => { buzz(); send({ type: 'goto', index: i }); };
+    row.querySelector('.e').onclick = () => openSong(i);
+    box.appendChild(row);
+  });
+  const on = box.querySelector('.song.on');
+  if (on && $('s-culto').classList.contains('on')) on.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+$('next').onclick = () => { buzz(20); send({ type: 'next' }); };
+$('prev').onclick = () => { buzz(20); send({ type: 'prev' }); };
+
+// ---------------------------------------------------------------- repertório: edição
+const keySel = $('songKey');
+keySel.innerHTML = '<option value="">Sem tom</option>' + SHARP.map((n, i) => `<option value="${i}">${n}${FLAT[i] ? ' / ' + FLAT[i] : ''}</option>`).join('');
+
+function pushSetlist(items, index) { send({ type: 'setlist', items, index }); }
+function openSong(i) {
+  editIndex = i;
+  const it = i >= 0 ? snap.setlist[i] : { name: '', key: null, minor: false };
+  $('songTitle').textContent = i >= 0 ? 'Editar música' : 'Nova música';
+  $('songName').value = it.name;
+  keySel.value = it.key === null ? '' : String(it.key);
+  $('songMode').value = it.minor ? 'min' : 'maj';
+  ['songDel', 'songUp', 'songDown'].forEach((id) => { $(id).style.display = i >= 0 ? '' : 'none'; });
+  $('songModal').classList.add('on');
+  setTimeout(() => $('songName').focus(), 50);
+}
+$('addSong').onclick = () => openSong(-1);
+$('songCancel').onclick = () => $('songModal').classList.remove('on');
+$('songSave').onclick = () => {
+  const items = snap.setlist.map((x) => ({ ...x }));
+  const item = { name: $('songName').value.trim() || 'Sem nome', key: keySel.value === '' ? null : Number(keySel.value), minor: $('songMode').value === 'min' };
+  if (editIndex >= 0) items[editIndex] = item; else items.push(item);
+  pushSetlist(items, st.setlistIndex);
+  $('songModal').classList.remove('on');
+};
+$('songDel').onclick = () => {
+  if (!confirm('Excluir esta música do culto?')) return;
+  const items = snap.setlist.filter((_, i) => i !== editIndex);
+  let idx = st.setlistIndex;
+  if (editIndex < idx) idx--; else if (editIndex === idx) idx = -1;
+  pushSetlist(items, idx);
+  $('songModal').classList.remove('on');
+};
+function move(dir) {
+  const j = editIndex + dir;
+  if (j < 0 || j >= snap.setlist.length) return;
+  const items = snap.setlist.map((x) => ({ ...x }));
+  [items[editIndex], items[j]] = [items[j], items[editIndex]];
+  let idx = st.setlistIndex;
+  if (idx === editIndex) idx = j; else if (idx === j) idx = editIndex;
+  pushSetlist(items, idx);
+  editIndex = j;
+}
+$('songUp').onclick = () => move(-1);
+$('songDown').onclick = () => move(1);
+
+// colar lista
+function parseLines(text) {
+  return text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((line) => {
+    const m = /^(.*?)\s*(?:[-–—;,|]|\()\s*([A-Ga-g][#b♯♭]?)(m(?!aj)|min|menor|maj|maior)?\s*\)?\s*$/i.exec(line);
+    if (m && m[1]) {
+      const n = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 }[m[2][0].toUpperCase()] + (/[#♯]/.test(m[2][1] || '') ? 1 : /[b♭]/.test(m[2][1] || '') ? -1 : 0);
+      return { name: m[1], key: (n + 12) % 12, minor: /^m(?!aj)/i.test(m[3] || '') };
+    }
+    return { name: line, key: null, minor: false };
+  });
+}
+$('pasteList').onclick = () => { $('pasteText').value = ''; $('pasteModal').classList.add('on'); };
+$('pasteCancel').onclick = () => $('pasteModal').classList.remove('on');
+$('pasteAdd').onclick = () => { const add = parseLines($('pasteText').value); if (add.length) pushSetlist([...snap.setlist, ...add], st.setlistIndex); $('pasteModal').classList.remove('on'); };
+$('pasteReplace').onclick = () => {
+  const add = parseLines($('pasteText').value);
+  if (snap.setlist.length && !confirm('Substituir todo o culto atual?')) return;
+  pushSetlist(add, -1); $('pasteModal').classList.remove('on');
+};
+
+// ---------------------------------------------------------------- PIN
+function showPin(msg) { $('pinErr').textContent = msg || ''; $('pinModal').classList.add('on'); setTimeout(() => $('pinInput').focus(), 50); }
+function hidePin() { $('pinModal').classList.remove('on'); $('pinInput').value = ''; }
+$('pinOk').onclick = () => { pin = $('pinInput').value.trim(); if (pin) send({ type: 'auth', pin }); };
+$('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('pinOk').click(); });
+$('logout').onclick = () => { lsDel('padsPin'); pin = ''; location.reload(); };
+
+// ---------------------------------------------------------------- conexão
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.onopen = () => {
+    if (pin) send({ type: 'auth', pin });
+    send({ type: 'hello', role: 'remote' });
+    $('dot').className = 'dot on'; $('conn').textContent = 'Conectado';
+  };
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'hello_ack') { if (!m.authed && !pin) showPin(); }
+    else if (m.type === 'auth') {
+      if (m.ok) { lsSet('padsPin', pin); hidePin(); send({ type: 'hello', role: 'remote' }); }
+      else { lsDel('padsPin'); pin = ''; showPin(m.blocked ? 'Muitas tentativas. Aguarde 1 minuto.' : 'PIN incorreto'); }
+    }
+    else if (m.type === 'denied') showPin('Informe o PIN');
+    else if (m.type === 'state') {
+      snap = m; st = m.state;
+      $('dot').className = m.players > 0 ? 'dot on' : 'dot warn';
+      $('conn').textContent = m.players > 0 ? 'PC com áudio' : 'PC sem player aberto';
+      render();
+      eng.apply();
+    }
+  };
+  ws.onclose = () => { $('dot').className = 'dot'; $('conn').textContent = 'Reconectando…'; setTimeout(connect, 1200); };
+  ws.onerror = () => { try { ws.close(); } catch {} };
+}
+connect();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && (!ws || ws.readyState > 1)) connect();
+});
+
+// tela sempre acesa
+async function wake() { try { if (navigator.wakeLock) await navigator.wakeLock.request('screen'); } catch {} }
+wake();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+</script>
+</body>
+</html>

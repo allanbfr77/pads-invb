@@ -1,0 +1,36 @@
+PADS REAIS (SAMPLES)
+
+Coloque aqui uma pasta para cada conjunto de pads. O nome da pasta vira o nome do timbre no app.
+
+  samples/
+    Pad Quente/
+      C.wav
+      Db.wav     (ou C#.wav)
+      D.wav
+      ...
+    Cordas Suaves/
+      C.wav
+      Cm.wav     (opcional: versão menor, usada quando o botão "Menor" está ligado)
+      ...
+
+REGRAS
+- O nome do arquivo precisa COMEÇAR com a nota: C, C#, Db, D, D#, Eb, E, F, F#, Gb, G, G#, Ab, A, A#, Bb, B.
+  Pode ter mais texto depois (ex.: "G - pad quente.wav", "Bb_pad.mp3").
+- Tons menores: coloque "m" depois da nota (Cm, C#m, Dbm, Am...), na mesma pasta ou numa pasta só de menores.
+  Se faltar o modo escolhido, o app usa os arquivos do outro modo.
+- Formatos: WAV, MP3, OGG, FLAC, M4A, AAC.
+- Não precisa ter as 12 notas. Se faltar alguma, o app usa a nota mais próxima e ajusta a altura
+  (funciona bem até cerca de 2 semitons de distância; as 12 notas dão o melhor resultado).
+- Cada arquivo deve ter de 10 a 60 segundos. NÃO use arquivos longos: o navegador carrega o arquivo inteiro
+  na memória (1 hora de áudio ocupa mais de 1 GB e demora para carregar).
+- O arquivo pode ter qualquer duração dentro disso. O app repete o arquivo
+  em loop com crossfade automático, então NÃO precisa ser um loop perfeito.
+- Use pads sem pulso rítmico e sem acorde que mude no meio (um pad "parado" no tom).
+
+DEPOIS DE COLOCAR OS ARQUIVOS
+- Abra a página do player no PC e clique em "Recarregar samples" (ou reinicie o servidor).
+- No celular, em Ajustes > Timbre, o novo conjunto aparece sozinho.
+
+LICENÇA
+- Use apenas sons que você tenha direito de usar no culto e nas transmissões online.
+  Confira a licença de cada pacote (uso comercial e transmissão) antes de usar.

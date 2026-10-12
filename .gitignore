@@ -1,0 +1,16 @@
+node_modules/
+chrome-profile/
+dist/
+
+# dados e configuração locais (repertório, PIN)
+data.json
+data.json.tmp
+config.json
+
+# certificados HTTPS
+cert.pem
+key.pem
+
+# samples de áudio (pesados; ficam só no PC)
+samples/*
+!samples/LEIA-ME.txt
